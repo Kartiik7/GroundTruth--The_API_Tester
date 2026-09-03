@@ -28,6 +28,13 @@ import json
 import os
 import sys
 
+# Ensure stdout/stderr can handle UTF-8 (LLM output often contains Unicode).
+# This is a no-op on terminals already in UTF-8 mode.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 from dotenv import load_dotenv
 
 from groundtruth.executor import execute
@@ -63,7 +70,7 @@ def _dim(t: str) -> str:
     return _c("2", t)
 
 
-DIVIDER = "─" * 60
+DIVIDER = "-" * 60
 
 
 # ── Argument parsing ──────────────────────────────────────────────────────────
@@ -170,8 +177,8 @@ def main() -> None:
 
     print(f"\n  Documented responses:")
     for code, resp in endpoint.responses.items():
-        has_schema = "✓ schema" if resp.schema else "no body"
-        print(f"    {code}  {resp.description[:50]:50s}  [{has_schema}]")
+        has_schema = "[schema]" if resp.schema else "[no body]"
+        print(f"    {code}  {resp.description[:50]:50s}  {has_schema}")
 
     # ── MODULE 2: Test Case Generator ────────────────────────────────────────
 
@@ -222,7 +229,7 @@ def main() -> None:
     results = []
     for tc in test_cases:
         color = category_colors.get(tc.category, str)
-        print(f"  → {_bold(tc.id)}  {color(tc.category)}  —  {tc.description}")
+        print(f"  >> {_bold(tc.id)}  {color(tc.category)}  --  {tc.description}")
 
         result = execute(
             test_case=tc,
@@ -233,9 +240,9 @@ def main() -> None:
         results.append(result)
 
         if result.skipped:
-            print(f"    {_yellow('⊘ SKIPPED')}  {result.skip_reason}")
+            print(f"    [SKIPPED]  {result.skip_reason}")
         elif result.error:
-            print(f"    {_red('✗ ERROR')}    {result.error}")
+            print(f"    [ERROR]  {result.error}")
         else:
             status_str = str(result.status_code)
             if result.status_code and result.status_code < 300:
@@ -245,7 +252,7 @@ def main() -> None:
             else:
                 status_str = _red(status_str)
 
-            print(f"    {_green('✓')} HTTP {status_str}  in {result.response_time_ms}ms")
+            print(f"    OK HTTP {status_str}  in {result.response_time_ms}ms")
 
             body_str = json.dumps(result.response_body)
             if len(body_str) > 140:
@@ -272,11 +279,11 @@ def main() -> None:
 
     # Outcome label → (colour fn, icon)
     _outcome_style = {
-        "SPEC_MATCH":             (_green,  "✓"),
-        "SPEC_VIOLATION":         (_red,    "✗"),
-        "UNDOCUMENTED_BEHAVIOR":  (_yellow, "⚠"),
-        "SKIPPED":                (_yellow, "⊘"),
-        "EXECUTION_ERROR":        (_red,    "✗"),
+        "SPEC_MATCH":             (_green,  "[PASS]"),
+        "SPEC_VIOLATION":         (_red,    "[FAIL]"),
+        "UNDOCUMENTED_BEHAVIOR":  (_yellow, "[WARN]"),
+        "SKIPPED":                (_yellow, "[SKIP]"),
+        "EXECUTION_ERROR":        (_red,    "[ERR] "),
     }
 
     # Build a quick lookup: test_case_id → TestCase
@@ -292,7 +299,7 @@ def main() -> None:
         outcome_str = color_fn(f"{icon} {vr.outcome}")
 
         llm_tag = (
-            _dim("(LLM guess matched ✓)")
+            _dim("(LLM guess matched)")
             if vr.llm_prediction_matched
             else _dim(f"(LLM guessed {vr.llm_expected_status}, got {vr.actual_status_code})")
         )
@@ -303,7 +310,7 @@ def main() -> None:
         if vr.schema_errors:
             print(f"    {_red('Schema errors:')}")
             for err in vr.schema_errors:
-                print(f"      • {err}")
+                print(f"      - {err}")
 
         print()
 
