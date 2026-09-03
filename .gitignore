@@ -1,0 +1,11 @@
+implementation_plan*
+walkthrough*
+
+.env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.vscode/
+
+.env*
