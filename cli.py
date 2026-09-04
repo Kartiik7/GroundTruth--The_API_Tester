@@ -107,6 +107,9 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--model", default="openai/gpt-oss-120b", metavar="MODEL",
                    help="Groq model to use for test generation "
                         "(default: openai/gpt-oss-120b)")
+    p.add_argument("--output", default=None, metavar="PATH",
+                   help="Write a full JSON report to this file (optional). "
+                        "Console summary is always printed.")
     return p
 
 
@@ -261,13 +264,6 @@ def main() -> None:
 
         print()
 
-    # ── Raw JSON dump ─────────────────────────────────────────────────────────
-
-    print(f"{_bold('RAW EXECUTION RESULTS')}")
-    print(DIVIDER)
-    output = [dataclasses.asdict(r) for r in results]
-    print(json.dumps(output, indent=2))
-
     # ── MODULE 4: Schema Validator ────────────────────────────────────────────
 
     from groundtruth.validator import validate  # local import — keeps modules independent
@@ -314,24 +310,28 @@ def main() -> None:
 
         print()
 
-    # Summary counts
-    from collections import Counter
-    counts = Counter(vr.outcome for vr in validations)
-    print(DIVIDER)
-    for label in ["SPEC_MATCH", "SPEC_VIOLATION", "UNDOCUMENTED_BEHAVIOR", "SKIPPED", "EXECUTION_ERROR"]:
-        n = counts.get(label, 0)
-        if n == 0:
-            continue
-        color_fn, icon = _outcome_style[label]
-        print(f"  {color_fn(f'{icon} {label}'):30s}  {n}")
-    print()
+    # -- MODULE 5: Report Generator -------------------------------------------
 
-    # Final JSON dump (both execution and validation results together)
-    print(f"{_bold('RAW VALIDATION RESULTS (JSON)')}")
+    from groundtruth.report import build_summary, print_console_report, write_json_report
+
+    print(f"\n{_bold('MODULE 5 -- Report Generator')}")
     print(DIVIDER)
-    print(json.dumps([dataclasses.asdict(vr) for vr in validations], indent=2))
+
+    summary = build_summary(test_cases, validations)
+    print_console_report(summary, endpoint, validations, test_cases)
+
+    if args.output:
+        write_json_report(
+            path=args.output,
+            endpoint=endpoint,
+            test_cases=test_cases,
+            results=results,
+            validations=validations,
+            summary=summary,
+        )
+        print(f"  JSON report written to: {args.output}")
+        print()
 
 
 if __name__ == "__main__":
     main()
-

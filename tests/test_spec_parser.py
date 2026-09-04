@@ -266,3 +266,150 @@ class TestRefResolution:
         assert schema is not None
         assert schema["type"] == "object"
         assert "name" in schema.get("required", [])
+
+
+def _has_any_ref(node: object) -> bool:
+    """Recursively check whether any $ref key remains anywhere in a schema tree."""
+    if isinstance(node, dict):
+        if "$ref" in node:
+            return True
+        return any(_has_any_ref(v) for v in node.values())
+    if isinstance(node, list):
+        return any(_has_any_ref(item) for item in node)
+    return False
+
+
+class TestDeepRefResolution:
+    """
+    Verifies that _deref_schema fully expands all $ref nodes — including
+    nested refs inside resolved schemas — leaving ZERO $ref keys in the tree.
+    Uses the petstore.yaml fixture because Pet -> Category and Pet -> Tag
+    are real multi-level ref chains.
+    """
+
+    def test_pet_schema_has_no_remaining_refs(self):
+        """
+        The Pet schema references Category and Tag via $ref.
+        After parse_endpoint, the 200 response schema must have no $ref left.
+        """
+        spec = _spec()
+        ep = parse_endpoint(spec, "/pet/{petId}", "get")
+        schema = ep.responses["200"].schema
+        assert schema is not None
+        assert not _has_any_ref(schema), (
+            "Found remaining $ref keys in the resolved Pet schema. "
+            "Deep dereferencing failed."
+        )
+
+    def test_pet_schema_category_is_expanded_inline(self):
+        """
+        Pet.category is a $ref to Category. After resolution it must be
+        an inline object schema with 'id' and 'name' properties.
+        """
+        spec = _spec()
+        ep = parse_endpoint(spec, "/pet/{petId}", "get")
+        schema = ep.responses["200"].schema
+        assert schema is not None
+
+        category_schema = schema["properties"]["category"]
+        # Must be a fully expanded object, not a $ref pointer
+        assert "$ref" not in category_schema
+        assert category_schema.get("type") == "object"
+        assert "id" in category_schema["properties"]
+        assert "name" in category_schema["properties"]
+
+    def test_pet_schema_tags_items_are_expanded_inline(self):
+        """
+        Pet.tags is an array of Tag refs. Each items schema must be
+        fully expanded inline — no $ref remaining.
+        """
+        spec = _spec()
+        ep = parse_endpoint(spec, "/pet/{petId}", "get")
+        schema = ep.responses["200"].schema
+        assert schema is not None
+
+        tags_schema = schema["properties"]["tags"]
+        assert tags_schema["type"] == "array"
+        items = tags_schema["items"]
+        assert "$ref" not in items
+        assert items.get("type") == "object"
+        assert "id" in items["properties"]
+        assert "name" in items["properties"]
+
+    def test_request_body_schema_has_no_remaining_refs(self):
+        """
+        POST /pet has a NewPet body schema (also references Category/Tag).
+        The request body schema must be fully dereferenced too.
+        """
+        spec = _spec()
+        ep = parse_endpoint(spec, "/pet", "post")
+        assert ep.request_body is not None
+        assert not _has_any_ref(ep.request_body.schema), (
+            "Found remaining $ref keys in the resolved NewPet request body schema."
+        )
+
+    def test_find_by_status_response_array_items_dereffed(self):
+        """
+        GET /pet/findByStatus returns an array of Pet. The items $ref
+        must be fully expanded so no $ref remains.
+        """
+        spec = _spec()
+        ep = parse_endpoint(spec, "/pet/findByStatus", "get")
+        schema = ep.responses["200"].schema
+        assert schema is not None
+        assert schema["type"] == "array"
+        assert not _has_any_ref(schema), (
+            "Found remaining $ref keys in the findByStatus array schema."
+        )
+
+    def test_circular_ref_guard_does_not_stack_overflow(self, tmp_path):
+        """
+        A schema that directly references itself must not cause infinite
+        recursion. The circular ref guard returns a stub dict instead.
+        """
+        raw = textwrap.dedent("""
+            openapi: "3.0.3"
+            info:
+              title: CircularTest
+              version: "1.0"
+            paths:
+              /nodes/{id}:
+                get:
+                  parameters:
+                    - name: id
+                      in: path
+                      required: true
+                      schema:
+                        type: integer
+                  responses:
+                    "200":
+                      description: A node
+                      content:
+                        application/json:
+                          schema:
+                            $ref: "#/components/schemas/Node"
+            components:
+              schemas:
+                Node:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    child:
+                      $ref: "#/components/schemas/Node"
+        """)
+        f = tmp_path / "circular.yaml"
+        f.write_text(raw, encoding="utf-8")
+        spec = load_spec(str(f))
+        # Must not raise RecursionError
+        ep = parse_endpoint(spec, "/nodes/{id}", "get")
+        schema = ep.responses["200"].schema
+        assert schema is not None
+        assert schema["type"] == "object"
+        # The top-level fields must be present
+        assert "id" in schema["properties"]
+        assert "child" in schema["properties"]
+        # The child's own 'child' must be a circular-ref stub (not another full expansion)
+        child = schema["properties"]["child"]
+        assert "$ref" not in child  # the ref itself was replaced
+

@@ -268,3 +268,64 @@ class ValidationResult:
     Populated only when outcome == SPEC_VIOLATION.
     None for all other outcomes.
     """
+
+
+# ── Module 5 output ───────────────────────────────────────────────────────────
+
+
+@dataclass
+class ReportSummary:
+    """
+    Aggregated statistics for one full endpoint test run.
+
+    Produced by Module 5 (report.py). Contains only derived numbers —
+    the raw lists (TestCase, ExecutionResult, ValidationResult) are kept
+    outside this object so it stays lightweight and serialisable.
+    """
+
+    total_cases: int
+    """Total number of test cases in the run (including skipped/errored)."""
+
+    outcome_counts: Dict[str, int]
+    """
+    Count per outcome label.
+    Keys: SPEC_MATCH, SPEC_VIOLATION, UNDOCUMENTED_BEHAVIOR, SKIPPED, EXECUTION_ERROR.
+    Missing keys mean zero for that outcome.
+    """
+
+    outcome_pct: Dict[str, float]
+    """
+    Percentage of total_cases for each outcome (0.0 - 100.0).
+    Same keys as outcome_counts.
+    """
+
+    by_category: Dict[str, Dict[str, int]]
+    """
+    Cross-table: test category -> outcome label -> count.
+    e.g. {'happy_path': {'SPEC_MATCH': 1, 'UNDOCUMENTED_BEHAVIOR': 1}}
+    Only categories and outcomes that actually appear are included.
+    """
+
+    llm_matched_count: int
+    """Number of cases where llm_prediction_matched is True."""
+
+    llm_checkable_count: int
+    """
+    Denominator for LLM accuracy: cases that produced an HTTP response
+    (excludes SKIPPED and EXECUTION_ERROR, where no status was returned).
+    """
+
+    llm_accuracy_pct: float
+    """
+    llm_matched_count / llm_checkable_count * 100, or 0.0 if none checkable.
+    Informational only -- never used for pass/fail.
+    """
+
+    spec_violation_ids: List[str]
+    """
+    test_case_ids where outcome == SPEC_VIOLATION.
+    Surfaced prominently in the console report: these are actual contract
+    breaks where the API returned a documented status code but with a body
+    that violated its own spec schema.
+    """
+

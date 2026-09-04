@@ -1,0 +1,322 @@
+{
+  "groundtruth_version": "0.1.0",
+  "generated_at": "2026-09-04T08:56:32.149928+00:00",
+  "endpoint": {
+    "path": "/pet/{petId}",
+    "method": "get",
+    "operation_id": "getPetById",
+    "summary": "Find pet by ID"
+  },
+  "summary": {
+    "total_cases": 6,
+    "outcome_counts": {
+      "UNDOCUMENTED_BEHAVIOR": 5,
+      "SPEC_MATCH": 1
+    },
+    "outcome_pct": {
+      "UNDOCUMENTED_BEHAVIOR": 83.3,
+      "SPEC_MATCH": 16.7
+    },
+    "by_category": {
+      "happy_path": {
+        "UNDOCUMENTED_BEHAVIOR": 1
+      },
+      "invalid_input": {
+        "UNDOCUMENTED_BEHAVIOR": 1,
+        "SPEC_MATCH": 1
+      },
+      "not_found": {
+        "UNDOCUMENTED_BEHAVIOR": 1
+      },
+      "edge_case": {
+        "UNDOCUMENTED_BEHAVIOR": 2
+      }
+    },
+    "llm_matched_count": 1,
+    "llm_checkable_count": 6,
+    "llm_accuracy_pct": 16.7,
+    "spec_violation_ids": []
+  },
+  "test_cases": [
+    {
+      "id": "tc_001",
+      "category": "happy_path",
+      "description": "Retrieve an existing pet with a valid positive ID",
+      "path_params": {
+        "petId": 5
+      },
+      "query_params": {},
+      "headers": {},
+      "request_body": null,
+      "expected_status": 200
+    },
+    {
+      "id": "tc_002",
+      "category": "invalid_input",
+      "description": "Supplied petId is a negative integer, which is invalid",
+      "path_params": {
+        "petId": -10
+      },
+      "query_params": {},
+      "headers": {},
+      "request_body": null,
+      "expected_status": 400
+    },
+    {
+      "id": "tc_003",
+      "category": "invalid_input",
+      "description": "Supplied petId is a non-numeric string, causing a type validation error",
+      "path_params": {
+        "petId": "abc"
+      },
+      "query_params": {},
+      "headers": {},
+      "request_body": null,
+      "expected_status": 400
+    },
+    {
+      "id": "tc_004",
+      "category": "not_found",
+      "description": "Pet ID does not exist in the system",
+      "path_params": {
+        "petId": 99999
+      },
+      "query_params": {},
+      "headers": {},
+      "request_body": null,
+      "expected_status": 404
+    },
+    {
+      "id": "tc_005",
+      "category": "edge_case",
+      "description": "Pet ID is zero, testing boundary condition for non‑positive IDs",
+      "path_params": {
+        "petId": 0
+      },
+      "query_params": {},
+      "headers": {},
+      "request_body": null,
+      "expected_status": 400
+    },
+    {
+      "id": "tc_006",
+      "category": "edge_case",
+      "description": "Pet ID is the maximum int64 value, testing large integer handling",
+      "path_params": {
+        "petId": 9223372036854775807
+      },
+      "query_params": {},
+      "headers": {},
+      "request_body": null,
+      "expected_status": 404
+    }
+  ],
+  "execution_results": [
+    {
+      "test_case_id": "tc_001",
+      "endpoint_path": "/pet/{petId}",
+      "method": "get",
+      "status_code": 500,
+      "response_body": {
+        "code": 500,
+        "message": "There was an error processing your request. It has been logged (ID: e8881aeaa89a33bf)"
+      },
+      "response_headers": {
+        "date": "Fri, 04 Sep 2026 08:56:24 GMT",
+        "content-type": "application/json",
+        "content-length": "110",
+        "connection": "keep-alive",
+        "access-control-allow-origin": "*",
+        "access-control-allow-methods": "GET, POST, DELETE, PUT",
+        "access-control-allow-headers": "Content-Type, api_key, Authorization",
+        "access-control-expose-headers": "Content-Disposition",
+        "server": "Jetty(9.4.53.v20231009)"
+      },
+      "response_time_ms": 1671.69,
+      "skipped": false,
+      "skip_reason": null,
+      "error": null
+    },
+    {
+      "test_case_id": "tc_002",
+      "endpoint_path": "/pet/{petId}",
+      "method": "get",
+      "status_code": 500,
+      "response_body": {
+        "code": 500,
+        "message": "There was an error processing your request. It has been logged (ID: e5347a31b91038c9)"
+      },
+      "response_headers": {
+        "date": "Fri, 04 Sep 2026 08:56:25 GMT",
+        "content-type": "application/json",
+        "content-length": "110",
+        "connection": "keep-alive",
+        "access-control-allow-origin": "*",
+        "access-control-allow-methods": "GET, POST, DELETE, PUT",
+        "access-control-allow-headers": "Content-Type, api_key, Authorization",
+        "access-control-expose-headers": "Content-Disposition",
+        "server": "Jetty(9.4.53.v20231009)"
+      },
+      "response_time_ms": 1519.69,
+      "skipped": false,
+      "skip_reason": null,
+      "error": null
+    },
+    {
+      "test_case_id": "tc_003",
+      "endpoint_path": "/pet/{petId}",
+      "method": "get",
+      "status_code": 400,
+      "response_body": {
+        "code": 400,
+        "message": "Input error: couldn't convert `abc` to type `class java.lang.Long`"
+      },
+      "response_headers": {
+        "date": "Fri, 04 Sep 2026 08:56:27 GMT",
+        "content-type": "application/json",
+        "content-length": "91",
+        "connection": "keep-alive",
+        "access-control-allow-origin": "*",
+        "access-control-allow-methods": "GET, POST, DELETE, PUT",
+        "access-control-allow-headers": "Content-Type, api_key, Authorization",
+        "access-control-expose-headers": "Content-Disposition",
+        "server": "Jetty(9.4.53.v20231009)"
+      },
+      "response_time_ms": 1438.05,
+      "skipped": false,
+      "skip_reason": null,
+      "error": null
+    },
+    {
+      "test_case_id": "tc_004",
+      "endpoint_path": "/pet/{petId}",
+      "method": "get",
+      "status_code": 500,
+      "response_body": {
+        "code": 500,
+        "message": "There was an error processing your request. It has been logged (ID: f3bc0f62986a8b49)"
+      },
+      "response_headers": {
+        "date": "Fri, 04 Sep 2026 08:56:28 GMT",
+        "content-type": "application/json",
+        "content-length": "110",
+        "connection": "keep-alive",
+        "access-control-allow-origin": "*",
+        "access-control-allow-methods": "GET, POST, DELETE, PUT",
+        "access-control-allow-headers": "Content-Type, api_key, Authorization",
+        "access-control-expose-headers": "Content-Disposition",
+        "server": "Jetty(9.4.53.v20231009)"
+      },
+      "response_time_ms": 1530.63,
+      "skipped": false,
+      "skip_reason": null,
+      "error": null
+    },
+    {
+      "test_case_id": "tc_005",
+      "endpoint_path": "/pet/{petId}",
+      "method": "get",
+      "status_code": 500,
+      "response_body": {
+        "code": 500,
+        "message": "There was an error processing your request. It has been logged (ID: 415873a18973f018)"
+      },
+      "response_headers": {
+        "date": "Fri, 04 Sep 2026 08:56:30 GMT",
+        "content-type": "application/json",
+        "content-length": "110",
+        "connection": "keep-alive",
+        "access-control-allow-origin": "*",
+        "access-control-allow-methods": "GET, POST, DELETE, PUT",
+        "access-control-allow-headers": "Content-Type, api_key, Authorization",
+        "access-control-expose-headers": "Content-Disposition",
+        "server": "Jetty(9.4.53.v20231009)"
+      },
+      "response_time_ms": 1477.03,
+      "skipped": false,
+      "skip_reason": null,
+      "error": null
+    },
+    {
+      "test_case_id": "tc_006",
+      "endpoint_path": "/pet/{petId}",
+      "method": "get",
+      "status_code": 500,
+      "response_body": {
+        "code": 500,
+        "message": "There was an error processing your request. It has been logged (ID: 5e8e30365fa0844e)"
+      },
+      "response_headers": {
+        "date": "Fri, 04 Sep 2026 08:56:31 GMT",
+        "content-type": "application/json",
+        "content-length": "110",
+        "connection": "keep-alive",
+        "access-control-allow-origin": "*",
+        "access-control-allow-methods": "GET, POST, DELETE, PUT",
+        "access-control-allow-headers": "Content-Type, api_key, Authorization",
+        "access-control-expose-headers": "Content-Disposition",
+        "server": "Jetty(9.4.53.v20231009)"
+      },
+      "response_time_ms": 1532.77,
+      "skipped": false,
+      "skip_reason": null,
+      "error": null
+    }
+  ],
+  "validation_results": [
+    {
+      "test_case_id": "tc_001",
+      "outcome": "UNDOCUMENTED_BEHAVIOR",
+      "llm_prediction_matched": false,
+      "reason": "Status 500 is not documented for this endpoint. Documented codes: ['200', '400', '404']. This may indicate an undocumented error path or a spec gap.",
+      "actual_status_code": 500,
+      "llm_expected_status": 200,
+      "schema_errors": null
+    },
+    {
+      "test_case_id": "tc_002",
+      "outcome": "UNDOCUMENTED_BEHAVIOR",
+      "llm_prediction_matched": false,
+      "reason": "Status 500 is not documented for this endpoint. Documented codes: ['200', '400', '404']. This may indicate an undocumented error path or a spec gap.",
+      "actual_status_code": 500,
+      "llm_expected_status": 400,
+      "schema_errors": null
+    },
+    {
+      "test_case_id": "tc_003",
+      "outcome": "SPEC_MATCH",
+      "llm_prediction_matched": true,
+      "reason": "Status 400 matches spec. No body schema defined for 400 — body not validated.",
+      "actual_status_code": 400,
+      "llm_expected_status": 400,
+      "schema_errors": null
+    },
+    {
+      "test_case_id": "tc_004",
+      "outcome": "UNDOCUMENTED_BEHAVIOR",
+      "llm_prediction_matched": false,
+      "reason": "Status 500 is not documented for this endpoint. Documented codes: ['200', '400', '404']. This may indicate an undocumented error path or a spec gap.",
+      "actual_status_code": 500,
+      "llm_expected_status": 404,
+      "schema_errors": null
+    },
+    {
+      "test_case_id": "tc_005",
+      "outcome": "UNDOCUMENTED_BEHAVIOR",
+      "llm_prediction_matched": false,
+      "reason": "Status 500 is not documented for this endpoint. Documented codes: ['200', '400', '404']. This may indicate an undocumented error path or a spec gap.",
+      "actual_status_code": 500,
+      "llm_expected_status": 400,
+      "schema_errors": null
+    },
+    {
+      "test_case_id": "tc_006",
+      "outcome": "UNDOCUMENTED_BEHAVIOR",
+      "llm_prediction_matched": false,
+      "reason": "Status 500 is not documented for this endpoint. Documented codes: ['200', '400', '404']. This may indicate an undocumented error path or a spec gap.",
+      "actual_status_code": 500,
+      "llm_expected_status": 404,
+      "schema_errors": null
+    }
+  ]
+}

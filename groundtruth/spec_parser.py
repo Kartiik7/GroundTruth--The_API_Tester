@@ -73,21 +73,63 @@ def _resolve_ref(spec: dict, ref: str) -> dict:
     return node  # type: ignore[return-value]
 
 
-def _resolve_schema(spec: dict, schema: dict) -> dict:
+def _deref_schema(
+    spec: dict,
+    node: Any,
+    _visiting: frozenset = frozenset(),
+) -> Any:
     """
-    Recursively resolve all $ref entries within a schema fragment.
+    Recursively replace every {"$ref": "#/..."} in a schema tree with its
+    fully resolved, inline definition.
 
-    We stop after one level of resolution per call; callers that need
-    deep resolution should loop or recurse themselves. For typical
-    component schemas (non-circular), a single pass is enough.
+    After this function returns, the result contains ZERO remaining $ref keys
+    anywhere in the tree — every reference has been expanded inline.
+
+    Circular reference guard:
+        We track the set of $ref strings currently on the call stack in
+        `_visiting` (a frozenset — immutable, so each branch gets its own
+        independent copy). If we encounter a ref already being resolved on
+        the current path, we return a stub dict instead of recursing.
+        This prevents infinite recursion on schemas like:
+            Pet -> { category: { $ref: Category } -> { pet: { $ref: Pet } } }
+
+    Args:
+        spec:      The full raw spec dict (read-only, used for ref lookups).
+        node:      The current schema node being processed.
+        _visiting: Internal — the set of $ref paths on the current call stack.
+                   Callers outside this module should not pass this argument.
+
+    Returns:
+        A fully dereferenced copy of `node` — no $ref keys remain.
     """
-    if not isinstance(schema, dict):
-        return schema
-    if "$ref" in schema:
-        resolved = _resolve_ref(spec, schema["$ref"])
-        # Recurse one level in case the resolved target also has a $ref
-        return _resolve_schema(spec, resolved)
-    return schema
+    if isinstance(node, list):
+        return [_deref_schema(spec, item, _visiting) for item in node]
+
+    if not isinstance(node, dict):
+        # Scalar values (str, int, bool, None) — nothing to dereference
+        return node
+
+    if "$ref" in node:
+        ref = node["$ref"]
+
+        # Circular reference on the current resolution path — return a stub
+        # so the caller can continue validating the rest of the schema.
+        if ref in _visiting:
+            return {"description": f"(circular ref: {ref})"}
+
+        resolved = _resolve_ref(spec, ref)
+        # Expand the resolved target, adding this ref to the visited set
+        return _deref_schema(spec, resolved, _visiting | {ref})
+
+    # No $ref at this level — recurse into every value in the dict.
+    # We recurse into ALL keys unconditionally so we never miss a nested
+    # $ref regardless of the keyword (properties, items, allOf, anyOf,
+    # oneOf, not, if, then, else, additionalProperties, patternProperties,
+    # $defs, definitions, or any future extension keyword).
+    return {
+        key: _deref_schema(spec, value, _visiting)
+        for key, value in node.items()
+    }
 
 
 def _merge_parameters(
@@ -108,8 +150,7 @@ def _merge_parameters(
             raw = _resolve_ref(spec, raw["$ref"])
 
         param_schema = raw.get("schema", {})
-        if isinstance(param_schema, dict) and "$ref" in param_schema:
-            param_schema = _resolve_schema(spec, param_schema)
+        param_schema = _deref_schema(spec, param_schema)
 
         key = (raw["name"], raw["in"])
         seen[key] = ParameterDef(
@@ -137,7 +178,7 @@ def _parse_request_body(spec: dict, raw_body: dict) -> Optional[RequestBodyDef]:
     )
     media_type = content[content_type]
     raw_schema = media_type.get("schema", {})
-    resolved_schema = _resolve_schema(spec, raw_schema) if raw_schema else {}
+    resolved_schema = _deref_schema(spec, raw_schema) if raw_schema else {}
 
     return RequestBodyDef(
         required=raw_body.get("required", False),
@@ -164,7 +205,7 @@ def _parse_responses(spec: dict, raw_responses: dict) -> Dict[str, ResponseDef]:
             )
             raw_schema = content[ct].get("schema", {})
             if raw_schema:
-                resp_schema = _resolve_schema(spec, raw_schema)
+                resp_schema = _deref_schema(spec, raw_schema)
 
         result[str(status_code)] = ResponseDef(
             description=raw_resp.get("description", ""),
