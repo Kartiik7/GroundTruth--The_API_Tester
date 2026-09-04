@@ -1,0 +1,12 @@
+.env
+.git
+.gitignore
+__pycache__/
+*.pyc
+tests/
+.pytest_cache/
+*.md
+demo_orders_report.json
+demo_items_report.json
+demo_items_list_report.json
+report.json

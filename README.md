@@ -114,3 +114,33 @@ No crashes, no false failures — every unexpected `500` is reported as `UNDOCUM
 - **GroundTruth catches contract violations, not business-logic bugs the spec doesn't encode.** For example, an API that accepts a negative ID and returns a valid `200` response isn't a spec violation if the spec never said IDs must be positive — that's a gap in the spec itself, not something a contract tester can catch.
 - **Correctness is only as good as the spec.** An outdated or incomplete OpenAPI document will produce misleading `UNDOCUMENTED_BEHAVIOR` results for behavior that's actually intentional.
 - Scoped to a single endpoint per run by design — no automatic looping across an entire spec (a deliberate scope decision, not a missing feature).
+
+---
+
+## Run via Docker (no clone required)
+
+You can run GroundTruth via Docker, which defaults to the Streamlit UI on port 8501.
+
+```bash
+docker pull ghcr.io/kartiik7/groundtruth:latest
+
+docker run -p 8501:8501 --rm ghcr.io/kartiik7/groundtruth:latest \
+    -e GROQ_API_KEY=your_key_here
+```
+
+Open `http://localhost:8501` to use the UI.
+
+To run the CLI instead of the UI:
+
+```bash
+docker run --rm ghcr.io/kartiik7/groundtruth:latest \
+    -e GROQ_API_KEY=your_key_here \
+    --entrypoint python \
+    cli.py \
+    --spec /path/to/spec.yaml \
+    --base-url https://your-api.com \
+    --endpoint "/your/{resource}" \
+    --method get
+```
+
+*Note: If testing a locally-run API from inside the container, use `--base-url http://host.docker.internal:PORT` instead of `localhost`.*
